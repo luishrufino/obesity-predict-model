@@ -1,0 +1,32 @@
+version: '3.9'  # Pode remover esta linha conforme a mensagem de aviso
+
+services:
+  trainer:
+    build: ./train
+    volumes:
+      - model_volume:/model_data
+    restart: "no"
+
+  api:
+    build: ./api
+    ports:
+      - "5000:5000"
+    volumes:
+      - model_volume:/model_data
+    depends_on:
+      - trainer
+
+  streamlit:
+    build: ./streamlit
+    ports:
+      - "8501:8501"
+    volumes:
+      - ./streamlit:/app
+    command: streamlit run app.py --server.port=8501 --server.address=0.0.0.0
+    depends_on:
+      - api
+
+volumes:
+  model_volume:
+
+  
