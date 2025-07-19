@@ -6,9 +6,8 @@ from sklearn.model_selection import train_test_split
 from sklearn.metrics import accuracy_score, mean_absolute_error, classification_report
 from shared.utils import FeatureEngineering, TrasformNumeric, MinMaxScalerFeatures, LifestyleScore, ObesityMap, Model, DropNonNumeric
 
-
-obesity_df = pd.read_csv('Obesity.csv', sep=',')
-
+url = 'https://raw.githubusercontent.com/luishrufino/obesity-predict-model/main/Obesity.csv'
+obesity_df = pd.read_csv(url)
 
 pipeline = Pipeline([
     ('feature_engineering', FeatureEngineering()),
