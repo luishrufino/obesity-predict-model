@@ -65,8 +65,8 @@ obesity-predict-model/
 ### 1. Clonar o repositório
 
 ```bash
-git clone https://github.com/seu-usuario/obesity-fastcheck.git
-cd obesity-fastcheck
+git clone https://github.com/luishrufino/obesity-predict-model.git
+cd obesity-predict-model
 ```
 
 ### 2. Treinar o modelo
