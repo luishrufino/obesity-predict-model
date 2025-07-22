@@ -1,0 +1,34 @@
+version: '3.9'
+
+services:
+  trainer:
+    build: ./train
+    volumes:
+      - model_volume:/model_data
+      - ./shared:/app/shared
+    restart: "no"
+
+  api:
+    build: ./api
+    ports:
+      - "5000:5000"
+    volumes:
+      - model_volume:/model_data
+      - ./shared:/app/shared
+    depends_on:
+      - trainer
+
+  streamlit:
+    build: ./streamlit
+    ports:
+      - "8501:8501"
+    volumes:
+      - ./streamlit:/app
+      - ./shared:/app/shared
+    command: streamlit run app.py --server.port=8501 --server.address=0.0.0.0
+    depends_on:
+      - api
+
+volumes:
+  model_volume:
+
