@@ -9,6 +9,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 # Copia todos os arquivos do diretório api
 COPY api/ /app/
+COPY ../shared /app/shared
 
 # Usa a porta dinâmica definida pelo Render
 CMD gunicorn --bind 0.0.0.0:$PORT app:app
