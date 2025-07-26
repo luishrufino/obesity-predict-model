@@ -5,18 +5,20 @@ services:
     name: obesity-api
     env: docker
     repo: https://github.com/luishrufino/obesity-predict-model
-    buildContext: ./api 
-    dockerfilePath: ./api/Dockerfile
     plan: free
+    dockerBuild:
+      context: ./api
+      dockerfile: ./api/Dockerfile
 
   # Serviço do App Streamlit
   - type: web
     name: obesity-streamlit-app
     env: docker
     repo: https://github.com/luishrufino/obesity-predict-model
-    buildContext: ./streamlit 
-    dockerfilePath: ./streamlit/Dockerfile
     plan: free
+    dockerBuild:
+      context: ./streamlit
+      dockerfile: ./streamlit/Dockerfile
     envVars:
       - key: API_URL
         value: http://obesity-api:10000
