@@ -150,7 +150,7 @@ if st.button("Prever Nível de Obesidade"):
             return "Erro: Chave da API não configurada."
 
         # Cria o modelo
-        model = genai.GenerativeModel('gemini-1.5-flash-latest') # Usando o modelo Flash, que é rápido e eficiente
+        model = genai.GenerativeModel('gemini-2.5-flash') # Usando o modelo Flash, que é rápido e eficiente
 
         # O prompt é a parte mais importante. Ele guia a IA para dar a resposta desejada.
         prompt = f"""
