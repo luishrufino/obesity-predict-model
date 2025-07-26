@@ -1,0 +1,20 @@
+# render.yaml
+services:
+  # Serviço da API Flask
+  - type: web
+    name: obesity-api
+    env: docker
+    dockerfilePath: ./api/Dockerfile
+    repo: https://github.com/luishrufino/obesity-predict-model
+    plan: free
+
+  # Serviço do App Streamlit
+  - type: web
+    name: obesity-streamlit-app
+    env: docker
+    dockerfilePath: ./streamlit/Dockerfile
+    repo: https://github.com/luishrufino/obesity-predict-model
+    plan: free
+    envVars:
+      - key: API_URL
+        value: http://obesity-api:10000 #
