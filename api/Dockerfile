@@ -11,4 +11,4 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY api/ /app/
 
 # Usa a porta dinâmica definida pelo Render
-CMD ["gunicorn", "--bind", "0.0.0.0:${PORT}", "app:app"]
+CMD gunicorn --bind 0.0.0.0:$PORT app:app
