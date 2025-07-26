@@ -5,9 +5,8 @@ services:
     name: obesity-api
     env: docker
     dockerfilePath: ./api/Dockerfile
-    repo: https://github.com/luishrufino/obesity-predict-model 
-    plan: free # Define o plano gratuito
-    # O Render automaticamente expõe a porta do container. Usamos 10000 no gunicorn.
+    repo: https://github.com/luishrufino/obesity-predict-model
+    plan: free
 
   # Serviço do App Streamlit
   - type: web
@@ -15,47 +14,7 @@ services:
     env: docker
     dockerfilePath: ./streamlit/Dockerfile
     repo: https://github.com/luishrufino/obesity-predict-model
-    plan: free # Define o plano gratuito
+    plan: free
     envVars:
-      - key: GOOGLE_API_KEY
-        fromSecret: true # Indica que o valor virá dos segredos do Render
       - key: API_URL
-        fromService:
-          type: web
-          name: obesity-api # Pega a URL interna da API
-          property: url
-
-# version: '3.9'
-
-# services:
-#   trainer:
-#     build: ./train
-#     volumes:
-#       - model_volume:/model_data
-#       - ./shared:/app/shared
-#     restart: "no"
-
-#   api:
-#     build: ./api
-#     ports:
-#       - "5000:5000"
-#     volumes:
-#       - model_volume:/model_data
-#       - ./shared:/app/shared
-#     depends_on:
-#       - trainer
-
-#   streamlit:
-#     build: ./streamlit
-#     ports:
-#       - "8501:8501"
-#     volumes:
-#       - ./streamlit:/app
-#       - ./shared:/app/shared
-#     command: streamlit run app.py --server.port=8501 --server.address=0.0.0.0
-#     depends_on:
-#       - api
-
-# volumes:
-#   model_volume:
-
+        value: http://obesity-api:10000 #
