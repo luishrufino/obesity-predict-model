@@ -3,7 +3,6 @@ import requests
 import pandas as pd
 import streamlit as st
 import google.generativeai as genai
-from shared.utils import FeatureEngineering, TrasformNumeric, LifestyleScore
 
 API_URL = os.getenv("API_URL", "http://api:5000")
 
