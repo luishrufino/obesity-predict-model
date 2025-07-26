@@ -13,9 +13,7 @@ try:
 except FileNotFoundError:
     raise Exception(f"Arquivo do modelo não encontrado em {pipeline_path}. Verifique o volume do Docker.")
 
-
-
-# Define a estrutura de dados de entrada usando Pydantic para validação
+# Define a estrutura de dados de entrada usando Pydantic
 class InputData(BaseModel):
     Height: float
     Weight: float
@@ -32,22 +30,42 @@ class InputData(BaseModel):
     CALC: str
     Gender: str
     MTRANS: str
-    
 
 @app.route('/predict', methods=['POST'])
 def predict():
     try:
         input_data = InputData(**request.get_json())
         features_df = pd.DataFrame([input_data.dict()])
+
+
+        transformed_df = pipeline[:-1].transform(features_df)
+
+
         prediction = pipeline.predict(features_df)
+
+        calculated_features = {
+            'HealthyMealRatio': round(transformed_df['HealthyMealRatio'].iloc[0].item(), 2),
+            'ActivityBalance': transformed_df['ActivityBalance'].iloc[0].item(),
+            'TransportType': transformed_df['TransportType'].iloc[0],
+            'LifestyleScore': transformed_df['LifestyleScore'].iloc[0].item()
+        }
+
+        # 4. Monta a resposta completa
+        response_data = {
+            "prediction": int(prediction[0]),
+            "calculated_features": calculated_features
+        }
+        
         return jsonify({
             "status": "success",
-            "data": {"prediction": int(prediction[0])}
+            "data": response_data
         }), 200
+
     except ValidationError as e:
         return jsonify({"error": str(e)}), 400
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
+        import traceback
+        return jsonify({"error": str(e), "trace": traceback.format_exc()}), 500
 
 @app.route('/')
 def home():
@@ -56,7 +74,6 @@ def home():
 @app.errorhandler(404)
 def not_found(error):
     return make_response(jsonify({"error": "Endpoint não encontrado. Use /predict com método POST."}), 404)
-
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000)

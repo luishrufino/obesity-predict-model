@@ -1,8 +1,105 @@
-import streamlit as st
+import os
 import requests
 import pandas as pd
+import streamlit as st
 import google.generativeai as genai
 from shared.utils import FeatureEngineering, TrasformNumeric, LifestyleScore
+
+API_URL = os.getenv("API_URL", "http://api:5000")
+
+def gerar_analise_ia(imc, lifestyle_score, healthy_meal_ratio, activity_balance, transport_type):
+    """
+    Gera uma análise de saúde personalizada usando a API do Google Gemini.
+    """
+    # Configura a API key a partir dos segredos do Streamlit
+    try:
+        genai.configure(api_key=st.secrets["GOOGLE_API_KEY"])
+    except Exception:
+        st.error("Chave da API do Google não encontrada. Verifique o arquivo secrets.toml.")
+        return "Erro: Chave da API não configurada."
+
+    # Cria o modelo
+    model = genai.GenerativeModel('gemini-2.5-flash') # Usando o modelo Flash, que é rápido e eficiente
+
+    # O prompt é a parte mais importante. Ele guia a IA para dar a resposta desejada.
+    prompt = f"""
+    Você é um assistente de saúde virtual do aplicativo ObesityFastCheck. Sua missão é fornecer uma análise prévia, educativa e motivacional com base nos dados do usuário, de forma empática e positiva.
+
+    **Dados do Usuário:**
+    - **IMC (Índice de Massa Corporal):** {imc:.2f}
+    - **LifestyleScore (Pontuação de Estilo de Vida):** {lifestyle_score}
+    - **HealthyMealRatio (Proporção de Refeição Saudável):** {healthy_meal_ratio:.2f}
+    - **ActivityBalance (Balanço de Atividade Física vs. Tela):** {activity_balance}
+    - **TransportType (Tipo de Transporte):** '{transport_type}'
+
+    - ** Inputa do usuário: para avaliações mais precisas**
+    - **Geral:** {input_data}
+
+    **Instruções:**
+    -   IMC (Índice de Massa Corporal)
+        Fórmula: peso / altura²
+        Bom: Entre 18.5 e 24.9 → Indica peso adequado em relação à altura.
+        Ruim:Abaixo de 18.5 → Pode indicar desnutrição ou alimentação insuficiente. Acima de 25 → Pode indicar sobrepeso ou obesidade, aumentando risco de doenças crônicas.
+
+    -   LifestyleScore (Pontuação de Estilo de Vida)
+        Pontuação de zero a quatro, baseada em quatro hábitos saudáveis:
+            Não fumar
+            Controlar calorias
+            Evitar alimentos muito calóricos
+            Não ter histórico familiar de sobrepeso
+
+        Score 4: Excelente → Estilo de vida muito saudável, com baixo risco metabólico.
+        Score 2 ou 3: Regular → Há bons hábitos.
+        Score 0 ou 1: Ruim → Estilo de vida de risco, associado a maus hábitos alimentares e comportamentos sedentários.
+
+    -   HealthyMealRatio (Proporção de Refeição Saudável)
+        Fórmula: consumo de vegetais / número de refeições        
+        Bom: Acima de 0.5 → Indica que mais da metade das refeições incluem vegetais.
+        Ruim: Abaixo de 0.3 → Pouca ingestão de vegetais, alimentação pobre em fibras e micronutrientes.
+
+        Exemplo:
+            FCVC = 3 e NCP = 3 → Ratio = 1 → Muito bom!
+            FCVC = 1 e NCP = 4 → Ratio = 0.25 → Precisa melhorar!
+
+    -   ActivityBalance (Balanço de Atividade Física vs. Tempo em Tela)
+        Fórmula: FAF - TUE
+        Bom: Acima de 1 → Atividade física supera o tempo em frente a telas.
+        Neutro: Próximo de zero → Equilíbrio entre movimento e sedentarismo.
+        Ruim: Negativo (ex: -1, -2) → Muito tempo parado, comportamento sedentário.
+
+        Exemplo:
+            FAF = 3, TUE = 1 → Balance = 2 → Excelente!
+            FAF = 1, TUE = 2 → Balance = -1 → Precisa se movimentar mais!
+
+    -   TransportType (Tipo de Transporte)
+        Classificação de acordo com o nível de atividade física envolvido:
+            active: Caminhada, Bicicleta → Excelente para manter rotina ativa.
+            neutral: Transporte Público → Moderado, geralmente envolve caminhada parcial.
+            sedentary: Automóvel, Motocicleta → Pouca ou nenhuma atividade física envolvida.
+
+
+    **Sua Tarefa:**
+    Com base nos dados acima, gere uma análise curta e coesa sobre o perfil de saúde do usuário. Combine as informações para dar uma visão holística. Por exemplo, se o IMC for alto, mas o LifestyleScore for bom, reconheça o esforço e sugira os próximos passos.
+
+    **Regras Obrigatórias:**
+    1.  **NUNCA forneça um diagnóstico médico formal.** Use termos como "sugere", "indica", "parece que".
+    2.  **SEMPRE reforce que a ferramenta é apenas educativa** e que a consulta com um profissional de saúde (médico, nutricionista) é indispensável para um diagnóstico e plano de tratamento real.
+    3.  **Use uma linguagem técnica, mas acessível.** Evite jargões médicos complexos e explique termos quando necessário. E não use nada motivacional ou de autoajuda, apenas análise.
+    4.  **Formate a resposta para ser exibida no Streamlit.** Use negrito (`**`) para destacar os pontos mais importantes.
+    5.  **Separe a análise de cada indicador por tópico. Deve ter 5 tópicos, 1 para cada indicador**
+    6.  **Crie uma conclusão breve que resuma os pontos principais e incentive o usuário a buscar mais informações ou ajuda profissional.**
+    7.  **Conside que o usuário está fazendo uma análise prévia, o objetivo da predição é auxiliar a tomada de decisão da equipe médica a diagnosticar a obesidade.**
+
+        
+    """
+
+    try:
+        response = model.generate_content(prompt)
+        return response.text
+    except Exception as e:
+        st.error(f"Ocorreu um erro ao contatar a IA: {e}")
+        return "Não foi possível gerar a análise no momento."
+    
 
 
 st.set_page_config(page_title="ObesityFastCheck", layout="centered")
@@ -95,161 +192,47 @@ with st.sidebar:
         """)
 
 
-# Botão para prever
+
 if st.button("Prever Nível de Obesidade"):
-    # Mapeamento para API
+
     input_data = {
-        "Height": Height,
-        "Weight": Weight,
-        "FCVC": FCVC,
-        "NCP": NCP,
-        "CH2O": CH2O,
-        "FAF": FAF,
-        "TUE": TUE,
+        "Height": Height, "Weight": Weight, "FCVC": FCVC, "NCP": NCP,
+        "CH2O": CH2O, "FAF": FAF, "TUE": TUE,
         "family_history": yes_no_map[family_history_pt],
-        "FAVC": yes_no_map[FAVC_pt],
-        "SMOKE": yes_no_map[SMOKE_pt],
-        "SCC": yes_no_map[SCC_pt],
-        "CAEC": caec_map[CAEC_pt],
-        "CALC": calc_map[CALC_pt],
-        "Gender": gender_map[Gender_pt],
+        "FAVC": yes_no_map[FAVC_pt], "SMOKE": yes_no_map[SMOKE_pt],
+        "SCC": yes_no_map[SCC_pt], "CAEC": caec_map[CAEC_pt],
+        "CALC": calc_map[CALC_pt], "Gender": gender_map[Gender_pt],
         "MTRANS": mtrans_map[MTRANS_pt]
     }
 
-    # Aplicar feature engineering e transformação
-    input_df = pd.DataFrame([input_data])
-
-    fe = FeatureEngineering()
-    input_df = fe.fit_transform(input_df)
-
-    tn = TrasformNumeric()
-    input_df = tn.fit_transform(input_df)
-
-    ls = LifestyleScore()
-    input_df = ls.fit_transform(input_df)
-
-    lifestyle_score = input_df.iloc[0]['LifestyleScore']
-    healthy_meal_ratio = input_df.iloc[0]['HealthyMealRatio']
-    activity_balance = input_df.iloc[0]['ActivityBalance']
-    transport_type = input_data['MTRANS']
-    transport_type = 'sedentary' if transport_type in ['Automobile', 'Motorbike'] else 'active' if transport_type in ['Bike', 'Walking'] else 'neutral'
-    imc = round(input_df.iloc[0]['IMC'], 2)
-
-
-
-    # Função para gerar a análise com IA
-    def gerar_analise_ia(imc, lifestyle_score, healthy_meal_ratio, activity_balance, transport_type):
-        """
-        Gera uma análise de saúde personalizada usando a API do Google Gemini.
-        """
-        # Configura a API key a partir dos segredos do Streamlit
-        try:
-            genai.configure(api_key=st.secrets["GOOGLE_API_KEY"])
-        except Exception:
-            st.error("Chave da API do Google não encontrada. Verifique o arquivo secrets.toml.")
-            return "Erro: Chave da API não configurada."
-
-        # Cria o modelo
-        model = genai.GenerativeModel('gemini-2.5-flash') # Usando o modelo Flash, que é rápido e eficiente
-
-        # O prompt é a parte mais importante. Ele guia a IA para dar a resposta desejada.
-        prompt = f"""
-        Você é um assistente de saúde virtual do aplicativo ObesityFastCheck. Sua missão é fornecer uma análise prévia, educativa e motivacional com base nos dados do usuário, de forma empática e positiva.
-
-        **Dados do Usuário:**
-        - **IMC (Índice de Massa Corporal):** {imc:.2f}
-        - **LifestyleScore (Pontuação de Estilo de Vida):** {lifestyle_score}
-        - **HealthyMealRatio (Proporção de Refeição Saudável):** {healthy_meal_ratio:.2f}
-        - **ActivityBalance (Balanço de Atividade Física vs. Tela):** {activity_balance}
-        - **TransportType (Tipo de Transporte):** '{transport_type}'
-
-        - ** Inputa do usuário: para avaliações mais precisas**
-        - **Geral:** {input_data}
-
-        **Instruções:**
-        -   IMC (Índice de Massa Corporal)
-            Fórmula: peso / altura²
-            Bom: Entre 18.5 e 24.9 → Indica peso adequado em relação à altura.
-            Ruim:Abaixo de 18.5 → Pode indicar desnutrição ou alimentação insuficiente. Acima de 25 → Pode indicar sobrepeso ou obesidade, aumentando risco de doenças crônicas.
-
-        -   LifestyleScore (Pontuação de Estilo de Vida)
-            Pontuação de zero a quatro, baseada em quatro hábitos saudáveis:
-                Não fumar
-                Controlar calorias
-                Evitar alimentos muito calóricos
-                Não ter histórico familiar de sobrepeso
-
-            Score 4: Excelente → Estilo de vida muito saudável, com baixo risco metabólico.
-            Score 2 ou 3: Regular → Há bons hábitos.
-            Score 0 ou 1: Ruim → Estilo de vida de risco, associado a maus hábitos alimentares e comportamentos sedentários.
-
-        -   HealthyMealRatio (Proporção de Refeição Saudável)
-            Fórmula: consumo de vegetais / número de refeições        
-            Bom: Acima de 0.5 → Indica que mais da metade das refeições incluem vegetais.
-            Ruim: Abaixo de 0.3 → Pouca ingestão de vegetais, alimentação pobre em fibras e micronutrientes.
-
-            Exemplo:
-                FCVC = 3 e NCP = 3 → Ratio = 1 → Muito bom!
-                FCVC = 1 e NCP = 4 → Ratio = 0.25 → Precisa melhorar!
-
-        -   ActivityBalance (Balanço de Atividade Física vs. Tempo em Tela)
-            Fórmula: FAF - TUE
-            Bom: Acima de 1 → Atividade física supera o tempo em frente a telas.
-            Neutro: Próximo de zero → Equilíbrio entre movimento e sedentarismo.
-            Ruim: Negativo (ex: -1, -2) → Muito tempo parado, comportamento sedentário.
-
-            Exemplo:
-                FAF = 3, TUE = 1 → Balance = 2 → Excelente!
-                FAF = 1, TUE = 2 → Balance = -1 → Precisa se movimentar mais!
-
-        -   TransportType (Tipo de Transporte)
-            Classificação de acordo com o nível de atividade física envolvido:
-                active: Caminhada, Bicicleta → Excelente para manter rotina ativa.
-                neutral: Transporte Público → Moderado, geralmente envolve caminhada parcial.
-                sedentary: Automóvel, Motocicleta → Pouca ou nenhuma atividade física envolvida.
-
-
-        **Sua Tarefa:**
-        Com base nos dados acima, gere uma análise curta e coesa sobre o perfil de saúde do usuário. Combine as informações para dar uma visão holística. Por exemplo, se o IMC for alto, mas o LifestyleScore for bom, reconheça o esforço e sugira os próximos passos.
-
-        **Regras Obrigatórias:**
-        1.  **NUNCA forneça um diagnóstico médico formal.** Use termos como "sugere", "indica", "parece que".
-        2.  **SEMPRE reforce que a ferramenta é apenas educativa** e que a consulta com um profissional de saúde (médico, nutricionista) é indispensável para um diagnóstico e plano de tratamento real.
-        3.  **Use uma linguagem técnica, mas acessível.** Evite jargões médicos complexos e explique termos quando necessário. E não use nada motivacional ou de autoajuda, apenas análise.
-        4.  **Formate a resposta para ser exibida no Streamlit.** Use negrito (`**`) para destacar os pontos mais importantes.
-        5.  **Separe a análise de cada indicador por tópico. Deve ter 5 tópicos, 1 para cada indicador**
-        6.  **Crie uma conclusão breve que resuma os pontos principais e incentive o usuário a buscar mais informações ou ajuda profissional.**
-        7.  **Conside que o usuário está fazendo uma análise prévia, o objetivo da predição é auxiliar a tomada de decisão da equipe médica a diagnosticar a obesidade.**
-
-         
-        """
-
-        try:
-            response = model.generate_content(prompt)
-            return response.text
-        except Exception as e:
-            st.error(f"Ocorreu um erro ao contatar a IA: {e}")
-            return "Não foi possível gerar a análise no momento."
-        
-    
 
     try:
-        response = requests.post("http://api:5000/predict", json=input_data)
+        predict_url = f"{API_URL}/predict"
+        response = requests.post(predict_url, json=input_data)
         # st.write("🔎 Dados enviados para a API:")
         # st.json(input_data)
 
         if response.status_code == 200:
             result = response.json()
+            data = result['data']
+            
+            # 3. Extrair os dados processados que a API retornou
+            predicted_class = data['prediction']
+            calculated_features = data.get('calculated_features', {})
+
+            # 4. Preparar os dados para a análise da IA
+            imc = calculated_features.get('IMC', round(input_data['Weight'] / (input_data['Height'] ** 2), 2))
+            lifestyle_score = calculated_features.get('LifestyleScore', 'N/A')
+            healthy_meal_ratio = calculated_features.get('HealthyMealRatio', 'N/A')
+            activity_balance = calculated_features.get('ActivityBalance', 'N/A')
+            transport_type = calculated_features.get('TransportType', 'N/A')
+
             label_map = {
-                0: 'Peso Insuficiente',
-                1: 'Peso Normal',
-                2: 'Sobrepeso Nível I',
-                3: 'Sobrepeso Nível II',
-                4: 'Obesidade Tipo I',
-                5: 'Obesidade Tipo II',
+                0: 'Peso Insuficiente', 1: 'Peso Normal', 2: 'Sobrepeso Nível I',
+                3: 'Sobrepeso Nível II', 4: 'Obesidade Tipo I', 5: 'Obesidade Tipo II',
                 6: 'Obesidade Tipo III'
             }
-            predicted_class = result['data']['prediction']
+
             predicted_label = label_map.get(predicted_class, 'Desconhecido')
 
             st.markdown("---")
