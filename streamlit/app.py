@@ -4,9 +4,9 @@ import pandas as pd
 import streamlit as st
 import google.generativeai as genai
 
-API_URL = os.getenv("API_URL", "http://api:5000")
+API_URL = os.getenv("API_URL", "https://obesity-api-flp2.onrender.com")
 
-def gerar_analise_ia(imc, lifestyle_score, healthy_meal_ratio, activity_balance, transport_type):
+def gerar_analise_ia(imc, lifestyle_score, healthy_meal_ratio, activity_balance, transport_type, input_data):
     """
     Gera uma análise de saúde personalizada usando a API do Google Gemini.
     """
@@ -257,7 +257,8 @@ if st.button("Prever Nível de Obesidade"):
                     lifestyle_score=lifestyle_score,
                     healthy_meal_ratio=healthy_meal_ratio,
                     activity_balance=activity_balance,
-                    transport_type=transport_type
+                    transport_type=transport_type,
+                    input_data=input_data
                 )
             st.markdown(analise_personalizada)
             st.markdown("---")

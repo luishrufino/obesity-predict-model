@@ -14,4 +14,4 @@ services:
     plan: free
     envVars:
       - key: API_URL
-        value: http://obesity-api:10000
+        value: https://obesity-api-flp2.onrender.com
