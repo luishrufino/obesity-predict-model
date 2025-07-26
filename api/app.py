@@ -7,7 +7,7 @@ app = Flask(__name__)
 
 # Tenta carregar o pipeline
 try:
-    pipeline_path = '/model_data/pipeline.pkl'
+    pipeline_path = 'obesity_model.pkl' 
     with open(pipeline_path, 'rb') as f:
         pipeline = pickle.load(f)
 except FileNotFoundError:
