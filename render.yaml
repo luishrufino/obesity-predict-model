@@ -2,16 +2,14 @@ services:
   - type: web
     name: obesity-api
     env: docker
-    dockerfilePath: ./api/Dockerfile
-    context: ./api
+    dockerfilePath: api/Dockerfile
     repo: https://github.com/luishrufino/obesity-predict-model
     plan: free
 
   - type: web
     name: obesity-streamlit-app
     env: docker
-    dockerfilePath: ./streamlit/Dockerfile
-    context: ./streamlit
+    dockerfilePath: streamlit/Dockerfile
     repo: https://github.com/luishrufino/obesity-predict-model
     plan: free
     envVars:
