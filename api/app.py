@@ -1,25 +1,27 @@
-from flask import Flask, request, jsonify, make_response
-import pickle
-import os
 import logging
+import os
+import pickle
 import pandas as pd
+from flask import Flask, request, jsonify, make_response
 from pydantic import BaseModel, ValidationError
-from shared.utils import FeatureEngineering, TrasformNumeric, MinMaxScalerFeatures, LifestyleScore, ObesityMap, Model, DropNonNumeric, DropFeatures
 
+# ======================================================================
+# --- SETUP DE LOGGING E IMPORTS ---
+# Configura o logging para exibir mensagens no console (logs do Render)
 logging.basicConfig(
     level=logging.INFO, 
     format='%(asctime)s - %(levelname)s - %(message)s'
 )
-# ======================================================================
 
 # Importa as classes customizadas (ESSENCIAL)
 try:
     from shared.utils import FeatureEngineering, TrasformNumeric, MinMaxScalerFeatures, LifestyleScore, Model, DropNonNumeric, DropFeatures
     logging.info("Módulo 'shared.utils' importado com sucesso.")
 except ImportError as e:
-    logging.error(f"FALHA AO IMPORTAR 'shared.utils': {e}")
+    logging.error(f"FALHA AO IMPORTAR 'shared.utils': {e}", exc_info=True)
     raise
 
+# ======================================================================
 
 app = Flask(__name__)
 
@@ -28,14 +30,10 @@ app = Flask(__name__)
 pipeline = None
 try:
     logging.info("Iniciando carregamento do pipeline...")
-    
-    # O caminho para o modelo dentro do container
     pipeline_path = 'obesity_model.pkl'
     
-    # Verifica se o arquivo realmente existe no caminho esperado
     if not os.path.exists(pipeline_path):
-        logging.error(f"ARQUIVO DO MODELO NÃO ENCONTRADO EM: {os.path.abspath(pipeline_path)}")
-        # Lista os arquivos no diretório para depuração
+        logging.error(f"ARQUIVO DO MODELO NÃO ENCONTRADO NO CAMINHO: {os.path.abspath(pipeline_path)}")
         logging.info(f"Arquivos no diretório atual ({os.path.abspath('.') }): {os.listdir('.')}")
         raise FileNotFoundError(f"Arquivo do modelo não foi encontrado em '{pipeline_path}'")
 
@@ -45,21 +43,11 @@ try:
     logging.info(">>> Pipeline carregado com SUCESSO! <<<")
 
 except Exception as e:
-    # Este é o log mais importante. Ele vai capturar QUALQUER erro durante o carregamento.
-    logging.error("FALHA CRÍTICA AO CARREGAR O PIPELINE. O worker não vai iniciar.", exc_info=True)
-    # Re-lança a exceção para que o Gunicorn ainda falhe, mas nós teremos o log.
+    logging.error("FALHA CRÍTICA AO CARREGAR O PIPELINE.", exc_info=True)
     raise e
 # ======================================================================
 
-# Tenta carregar o pipeline
-try:
-    pipeline_path = 'obesity_model.pkl' 
-    with open(pipeline_path, 'rb') as f:
-        pipeline = pickle.load(f)
-except FileNotFoundError:
-    raise Exception(f"Arquivo do modelo não encontrado em {pipeline_path}. Verifique o volume do Docker.")
-
-# Define a estrutura de dados de entrada usando Pydantic
+# --- DEFINIÇÃO DA ESTRUTURA DE DADOS DE ENTRADA ---
 class InputData(BaseModel):
     Height: float
     Weight: float
@@ -77,16 +65,21 @@ class InputData(BaseModel):
     Gender: str
     MTRANS: str
 
+# --- ROTAS DA API ---
+@app.route('/')
+def home():
+    if pipeline is not None:
+        return "API funcionando e modelo carregado. Use /predict com método POST.", 200
+    else:
+        return "API funcionando, mas o modelo não pôde ser carregado. Verifique os logs.", 500
+
 @app.route('/predict', methods=['POST'])
 def predict():
     try:
         input_data = InputData(**request.get_json())
         features_df = pd.DataFrame([input_data.dict()])
 
-
         transformed_df = pipeline[:-1].transform(features_df)
-
-
         prediction = pipeline.predict(features_df)
 
         calculated_features = {
@@ -96,7 +89,6 @@ def predict():
             'LifestyleScore': transformed_df['LifestyleScore'].iloc[0].item()
         }
 
-        # 4. Monta a resposta completa
         response_data = {
             "prediction": int(prediction[0]),
             "calculated_features": calculated_features
@@ -110,16 +102,14 @@ def predict():
     except ValidationError as e:
         return jsonify({"error": str(e)}), 400
     except Exception as e:
-        import traceback
-        return jsonify({"error": str(e), "trace": traceback.format_exc()}), 500
-
-@app.route('/')
-def home():
-    return "API funcionando. Use /predict com método POST para obter previsões.", 200
+        # Loga o erro do predict para depuração
+        logging.error("Erro durante a predição.", exc_info=True)
+        return jsonify({"error": "Ocorreu um erro interno durante a predição."}), 500
 
 @app.errorhandler(404)
 def not_found(error):
     return make_response(jsonify({"error": "Endpoint não encontrado. Use /predict com método POST."}), 404)
 
+# Bloco para execução local (não é usado pelo Gunicorn)
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000)
