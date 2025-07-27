@@ -1,10 +1,54 @@
 from flask import Flask, request, jsonify, make_response
 import pickle
+import logging
 import pandas as pd
 from pydantic import BaseModel, ValidationError
 from shared.utils import FeatureEngineering, TrasformNumeric, MinMaxScalerFeatures, LifestyleScore, ObesityMap, Model, DropNonNumeric, DropFeatures
 
+logging.basicConfig(
+    level=logging.INFO, 
+    format='%(asctime)s - %(levelname)s - %(message)s'
+)
+# ======================================================================
+
+# Importa as classes customizadas (ESSENCIAL)
+try:
+    from shared.utils import FeatureEngineering, TrasformNumeric, MinMaxScalerFeatures, LifestyleScore, Model, DropNonNumeric, DropFeatures
+    logging.info("Módulo 'shared.utils' importado com sucesso.")
+except ImportError as e:
+    logging.error(f"FALHA AO IMPORTAR 'shared.utils': {e}")
+    raise
+
+
 app = Flask(__name__)
+
+# ======================================================================
+# --- CARREGAMENTO DO MODELO COM LOGGING ---
+pipeline = None
+try:
+    logging.info("Iniciando carregamento do pipeline...")
+    
+    # O caminho para o modelo dentro do container
+    pipeline_path = 'obesity_model.pkl'
+    
+    # Verifica se o arquivo realmente existe no caminho esperado
+    if not os.path.exists(pipeline_path):
+        logging.error(f"ARQUIVO DO MODELO NÃO ENCONTRADO EM: {os.path.abspath(pipeline_path)}")
+        # Lista os arquivos no diretório para depuração
+        logging.info(f"Arquivos no diretório atual ({os.path.abspath('.') }): {os.listdir('.')}")
+        raise FileNotFoundError(f"Arquivo do modelo não foi encontrado em '{pipeline_path}'")
+
+    logging.info(f"Carregando modelo a partir de: {pipeline_path}")
+    with open(pipeline_path, 'rb') as f:
+        pipeline = pickle.load(f)
+    logging.info(">>> Pipeline carregado com SUCESSO! <<<")
+
+except Exception as e:
+    # Este é o log mais importante. Ele vai capturar QUALQUER erro durante o carregamento.
+    logging.error("FALHA CRÍTICA AO CARREGAR O PIPELINE. O worker não vai iniciar.", exc_info=True)
+    # Re-lança a exceção para que o Gunicorn ainda falhe, mas nós teremos o log.
+    raise e
+# ======================================================================
 
 # Tenta carregar o pipeline
 try:
