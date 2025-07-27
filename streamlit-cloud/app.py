@@ -6,6 +6,8 @@ import streamlit as st
 import google.generativeai as genai
 from utils import FeatureEngineering, TrasformNumeric, MinMaxScalerFeatures, LifestyleScore, ObesityMap, Model, DropNonNumeric, DropFeatures
 
+st.set_page_config(page_title="ObesityFastCheck", layout="centered")
+
 # Forçando o re-deploy
 @st.cache_resource
 def load_model():
@@ -117,7 +119,7 @@ def gerar_analise_ia(imc, lifestyle_score, healthy_meal_ratio, activity_balance,
     
 
 
-st.set_page_config(page_title="ObesityFastCheck", layout="centered")
+
 st.title("🔬 ObesityFastCheck")
 st.write("Insira suas informações para prever seu nível de obesidade com base em características alimentares e físicas:")
 
