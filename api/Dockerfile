@@ -17,5 +17,5 @@ COPY ../shared /app/shared
 COPY . /app/
 
 # Inicia o servidor Gunicorn
-CMD gunicorn --bind 0.0.0.0:$PORT app:app
+CMD gunicorn --bind 0.0.0.0:$PORT api:app
 
