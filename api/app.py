@@ -2,6 +2,7 @@ from flask import Flask, request, jsonify, make_response
 import pickle
 import pandas as pd
 from pydantic import BaseModel, ValidationError
+from shared.utils import FeatureEngineering, TrasformNumeric, MinMaxScalerFeatures, LifestyleScore, ObesityMap, Model, DropNonNumeric, DropFeatures
 
 app = Flask(__name__)
 
