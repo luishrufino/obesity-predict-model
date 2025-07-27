@@ -1,5 +1,6 @@
 import streamlit as st
 import pandas as pd
+from pathlib import Path
 import joblib  # Usando joblib para mais robustez
 from utils import (
     FeatureEngineering, TrasformNumeric, MinMaxScalerFeatures, 
@@ -12,20 +13,25 @@ import google.generativeai as genai
 st.set_page_config(page_title="ObesityFastCheck", layout="centered")
 
 # 3. FUNÇÕES AUXILIARES
-@st.cache_resource
-def load_model():
-    """Carrega o pipeline do arquivo uma única vez."""
-    try:
-        # Lembre-se de ajustar o caminho se 'app.py' estiver em uma subpasta
-        pipeline = joblib.load('obesity_model.pkl')
-        return pipeline
-    except FileNotFoundError:
-        st.error("Arquivo do modelo 'obesity_model.pkl' não encontrado.")
-        return None
-    except Exception as e:
-        st.error(f"Erro ao carregar o modelo: {e}")
-        return None
+
+try:
+    # Obtém o caminho do diretório onde o script atual está localizado
+    current_dir = Path(__file__).parent
     
+    # Constrói o caminho completo para o arquivo do modelo
+    model_path = current_dir / 'obesity_model.pkl'
+    
+    # Carrega o modelo usando o caminho completo e seguro
+    pipeline = joblib.load(model_path)
+    
+    print("Modelo carregado com sucesso a partir de:", model_path)
+
+except FileNotFoundError:
+    print("Erro crítico: O arquivo 'obesity_model.pkl' não foi encontrado no servidor.")
+    print(f"O código estava procurando o arquivo em: {model_path}")
+except Exception as e:
+    print(f"Ocorreu um erro ao carregar o modelo: {e}")
+
 
 
 def gerar_analise_ia(imc, lifestyle_score, healthy_meal_ratio, activity_balance, transport_type, input_data):
@@ -121,9 +127,6 @@ def gerar_analise_ia(imc, lifestyle_score, healthy_meal_ratio, activity_balance,
         st.error(f"Ocorreu um erro ao contatar a IA: {e}")
         return "Não foi possível gerar a análise no momento."
     
-
-# 4. CARREGAMENTO DO MODELO
-pipeline = load_model()
 
 # 5. INTERFACE DO USUÁRIO
 st.title("🔬 ObesityFastCheck")
