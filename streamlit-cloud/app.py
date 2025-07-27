@@ -1,6 +1,4 @@
-import os
-import pickle
-import requests
+import joblib
 import pandas as pd
 import streamlit as st
 import google.generativeai as genai
@@ -12,8 +10,8 @@ st.set_page_config(page_title="ObesityFastCheck", layout="centered")
 @st.cache_resource
 def load_model():
     try:
-        with open('streamlit-cloud/obesity_model.pkl', 'rb') as f:
-            pipeline = pickle.load(f)
+        # Usa joblib para carregar
+        pipeline = joblib.load('obesity_model.pkl')
         return pipeline
     except FileNotFoundError:
         st.error("Arquivo do modelo 'obesity_model.pkl' não encontrado.")
