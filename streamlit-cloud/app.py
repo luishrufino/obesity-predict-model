@@ -5,7 +5,7 @@ import pandas as pd
 import streamlit as st
 import google.generativeai as genai
 from utils import FeatureEngineering, TrasformNumeric, MinMaxScalerFeatures, LifestyleScore, ObesityMap, Model, DropNonNumeric, DropFeatures
-
+# Forçando o re-deploy
 @st.cache_resource
 def load_model():
     try:
