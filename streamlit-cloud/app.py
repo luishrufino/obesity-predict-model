@@ -5,11 +5,12 @@ import pandas as pd
 import streamlit as st
 import google.generativeai as genai
 from utils import FeatureEngineering, TrasformNumeric, MinMaxScalerFeatures, LifestyleScore, ObesityMap, Model, DropNonNumeric, DropFeatures
+
 # Forçando o re-deploy
 @st.cache_resource
 def load_model():
     try:
-        with open('obesity_model.pkl', 'rb') as f:
+        with open('streamlit-cloud/obesity_model.pkl', 'rb') as f:
             pipeline = pickle.load(f)
         return pipeline
     except FileNotFoundError:
