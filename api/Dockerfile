@@ -1,15 +1,20 @@
+# api/Dockerfile
+
 FROM python:3.9-slim
 
-# Define diretório de trabalho
+# Define o diretório de trabalho DENTRO do container
 WORKDIR /app
 
-# Copia e instala dependências primeiro (para cache otimizado)
-COPY api/requirements.txt /app/
+# Copia o 'requirements.txt' da pasta 'api' (o contexto atual do build)
+COPY requirements.txt /app/
+# Instala os pacotes
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copia todos os arquivos do diretório api
-COPY api/ /app/
+# Copia a pasta 'shared' (que está fora da pasta 'api') para dentro do container
 COPY ../shared /app/shared
 
-# Usa a porta dinâmica definida pelo Render
+# Copia TODO o resto da pasta 'api' (app.py, obesity_model.pkl) para dentro do container
+COPY . /app/
+
+# Inicia o servidor Gunicorn
 CMD gunicorn --bind 0.0.0.0:$PORT app:app
