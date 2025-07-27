@@ -1,16 +1,22 @@
-import joblib
-import pandas as pd
 import streamlit as st
+import pandas as pd
+import joblib  # Usando joblib para mais robustez
+from utils import (
+    FeatureEngineering, TrasformNumeric, MinMaxScalerFeatures, 
+    LifestyleScore, ObesityMap, Model, DropNonNumeric, DropFeatures
+)
 import google.generativeai as genai
-from utils import FeatureEngineering, TrasformNumeric, MinMaxScalerFeatures, LifestyleScore, ObesityMap, Model, DropNonNumeric, DropFeatures
 
+
+# 2. CONFIGURAÇÃO DA PÁGINA (PRIMEIRO COMANDO STREAMLIT)
 st.set_page_config(page_title="ObesityFastCheck", layout="centered")
 
-# Forçando o re-deploy
+# 3. FUNÇÕES AUXILIARES
 @st.cache_resource
 def load_model():
+    """Carrega o pipeline do arquivo uma única vez."""
     try:
-        # Usa joblib para carregar
+        # Lembre-se de ajustar o caminho se 'app.py' estiver em uma subpasta
         pipeline = joblib.load('obesity_model.pkl')
         return pipeline
     except FileNotFoundError:
@@ -20,7 +26,7 @@ def load_model():
         st.error(f"Erro ao carregar o modelo: {e}")
         return None
     
-pipeline = load_model()
+
 
 def gerar_analise_ia(imc, lifestyle_score, healthy_meal_ratio, activity_balance, transport_type, input_data):
     """
@@ -116,8 +122,10 @@ def gerar_analise_ia(imc, lifestyle_score, healthy_meal_ratio, activity_balance,
         return "Não foi possível gerar a análise no momento."
     
 
+# 4. CARREGAMENTO DO MODELO
+pipeline = load_model()
 
-
+# 5. INTERFACE DO USUÁRIO
 st.title("🔬 ObesityFastCheck")
 st.write("Insira suas informações para prever seu nível de obesidade com base em características alimentares e físicas:")
 
@@ -153,7 +161,6 @@ SCC_pt = st.radio("Você monitora seu consumo calórico?", list(yes_no_map.keys(
 CAEC_pt = st.selectbox("Consumo entre refeições (CAEC: lanches)", list(caec_map.keys()))
 CALC_pt = st.selectbox("Consumo de bebidas alcoólicas (CALC)", list(calc_map.keys()))
 MTRANS_pt = st.selectbox("Transporte mais usado", list(mtrans_map.keys()))
-
 
 
 with st.sidebar:
@@ -207,79 +214,80 @@ with st.sidebar:
         """)
 
 
-
+# 6. LÓGICA DO BOTÃO
 if st.button("Prever Nível de Obesidade"):
-
-    input_data = {
-        "Height": Height, "Weight": Weight, "FCVC": FCVC, "NCP": NCP,
-        "CH2O": CH2O, "FAF": FAF, "TUE": TUE,
-        "family_history": yes_no_map[family_history_pt],
-        "FAVC": yes_no_map[FAVC_pt], "SMOKE": yes_no_map[SMOKE_pt],
-        "SCC": yes_no_map[SCC_pt], "CAEC": caec_map[CAEC_pt],
-        "CALC": calc_map[CALC_pt], "Gender": gender_map[Gender_pt],
-        "MTRANS": mtrans_map[MTRANS_pt]
-    }
-    features_df = pd.DataFrame([input_data])
-
-    try:
-        transformed_df = pipeline[:-1].transform(features_df)
-        prediction = pipeline.predict(features_df)
-        # st.write("🔎 Dados enviados para a API:")
-        # st.json(input_data)
-
-        
-           
-           
-        
-        predicted_class = prediction[0] 
-        
-
-   
-        imc = transformed_df['IMC'].iloc[0]
-        lifestyle_score = transformed_df['LifestyleScore'].iloc[0]
-        healthy_meal_ratio = transformed_df['HealthyMealRatio'].iloc[0]
-        activity_balance = transformed_df['ActivityBalance'].iloc[0]
-        transport_type = transformed_df['TransportType'].iloc[0]
-
-        label_map = {
-            0: 'Peso Insuficiente', 1: 'Peso Normal', 2: 'Sobrepeso Nível I',
-            3: 'Sobrepeso Nível II', 4: 'Obesidade Tipo I', 5: 'Obesidade Tipo II',
-            6: 'Obesidade Tipo III'
+    if pipeline is not None:
+        input_data = {
+            "Height": Height, "Weight": Weight, "FCVC": FCVC, "NCP": NCP,
+            "CH2O": CH2O, "FAF": FAF, "TUE": TUE,
+            "family_history": yes_no_map[family_history_pt],
+            "FAVC": yes_no_map[FAVC_pt], "SMOKE": yes_no_map[SMOKE_pt],
+            "SCC": yes_no_map[SCC_pt], "CAEC": caec_map[CAEC_pt],
+            "CALC": calc_map[CALC_pt], "Gender": gender_map[Gender_pt],
+            "MTRANS": mtrans_map[MTRANS_pt]
         }
+        features_df = pd.DataFrame([input_data])
 
-         
+        try:
+            transformed_df = pipeline[:-1].transform(features_df)
+            prediction = pipeline.predict(features_df)
+            # st.write("🔎 Dados enviados para a API:")
+            # st.json(input_data)
 
-        st.markdown("---")
+            
+            
+            
+            
+            predicted_class = prediction[0] 
+            
 
-        st.markdown(
-            f"""
-            <div style='background:rgba(200,200,200,0.5); padding:18px; border-radius:12px; margin-bottom:10px;'>
-                <span style='font-size:28px; color:#222; font-weight:bold;'>
-                    Previsão: <strong>{label_map.get(predicted_class, 'N/A')}</strong>
-                </span>
-            </div>
-            """,
-            unsafe_allow_html=True
-        )
+    
+            imc = transformed_df['IMC'].iloc[0]
+            lifestyle_score = transformed_df['LifestyleScore'].iloc[0]
+            healthy_meal_ratio = transformed_df['HealthyMealRatio'].iloc[0]
+            activity_balance = transformed_df['ActivityBalance'].iloc[0]
+            transport_type = transformed_df['TransportType'].iloc[0]
 
-     
-        st.subheader("🤖 Análise Personalizada por IA")
-        
-        # Adiciona um spinner para mostrar que está processando
-        with st.spinner('Gerando análise com base nos seus dados...'):
-            analise_personalizada = gerar_analise_ia(
-                imc=imc,
-                lifestyle_score=lifestyle_score,
-                healthy_meal_ratio=healthy_meal_ratio,
-                activity_balance=activity_balance,
-                transport_type=transport_type,
-                input_data=input_data
+            label_map = {
+                0: 'Peso Insuficiente', 1: 'Peso Normal', 2: 'Sobrepeso Nível I',
+                3: 'Sobrepeso Nível II', 4: 'Obesidade Tipo I', 5: 'Obesidade Tipo II',
+                6: 'Obesidade Tipo III'
+            }
+
+            
+
+            st.markdown("---")
+
+            st.markdown(
+                f"""
+                <div style='background:rgba(200,200,200,0.5); padding:18px; border-radius:12px; margin-bottom:10px;'>
+                    <span style='font-size:28px; color:#222; font-weight:bold;'>
+                        Previsão: <strong>{label_map.get(predicted_class, 'N/A')}</strong>
+                    </span>
+                </div>
+                """,
+                unsafe_allow_html=True
             )
-        st.markdown(analise_personalizada)
-        st.markdown("---")
-                
-    except Exception as e:
-            st.error(f"Ocorreu um erro durante a análise: {e}")
-            st.error("Verifique se todos os campos foram preenchidos corretamente.")
+
+        
+            st.subheader("🤖 Análise Personalizada por IA")
+            
+            # Adiciona um spinner para mostrar que está processando
+            with st.spinner('Gerando análise com base nos seus dados...'):
+                analise_personalizada = gerar_analise_ia(
+                    imc=imc,
+                    lifestyle_score=lifestyle_score,
+                    healthy_meal_ratio=healthy_meal_ratio,
+                    activity_balance=activity_balance,
+                    transport_type=transport_type,
+                    input_data=input_data
+                )
+            st.markdown(analise_personalizada)
+            st.markdown("---")
+                    
+        except Exception as e:
+                st.error(f"Ocorreu um erro durante a análise: {e}")
+                st.error("Verifique se todos os campos foram preenchidos corretamente.")
+        pass 
 else:
         st.error("O modelo não está carregado. O aplicativo não pode fazer predições.")
