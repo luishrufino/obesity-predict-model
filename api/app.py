@@ -1,5 +1,6 @@
 from flask import Flask, request, jsonify, make_response
 import pickle
+import os
 import logging
 import pandas as pd
 from pydantic import BaseModel, ValidationError
